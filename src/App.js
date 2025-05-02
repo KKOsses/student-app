@@ -192,6 +192,85 @@ function App() {
     );
   }
 
+{/* Section: จัดการคะแนน */}
+<div style={{ marginTop: 40 }}>
+  <h2 style={{ fontSize: 20, fontWeight: '600', marginBottom: 10 }}>จัดการคะแนน</h2>
+
+  <div style={{ marginBottom: 20, background: '#f9fafb', padding: 15, borderRadius: 8 }}>
+    <label>ชื่อเล่น: <input value={formData.nickname || ''} onChange={e => setFormData({ ...formData, nickname: e.target.value })} /></label><br />
+    <label>เทอม:
+      <select value={formData.term || 'term1'} onChange={e => setFormData({ ...formData, term: e.target.value })}>
+        <option value="term1">เทอม 1</option>
+        <option value="term2">เทอม 2</option>
+      </select>
+    </label><br />
+    <label>หมวดหมู่:
+      <select value={formData.category || ''} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+        <option value="">--เลือก--</option>
+        <option value="แบบฝึกหัด">แบบฝึกหัด</option>
+        <option value="กิจกรรม">กิจกรรม</option>
+        <option value="สอบกลางภาค">สอบกลางภาค</option>
+        <option value="สอบปลายภาค">สอบปลายภาค</option>
+        <option value="จิตพิสัย">จิตพิสัย</option>
+      </select>
+    </label><br />
+    <label>คะแนน: <input type="number" value={formData.score || ''} onChange={e => setFormData({ ...formData, score: e.target.value })} /></label><br />
+    <label>หมายเหตุ: <input value={formData.note || ''} onChange={e => setFormData({ ...formData, note: e.target.value })} /></label><br />
+    <button onClick={handleAddScore}>บันทึกคะแนน</button>
+  </div>
+
+  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <thead style={{ backgroundColor: '#e5e7eb' }}>
+      <tr>
+        <th style={{ padding: 10 }}>วันที่</th>
+        <th>ชื่อเล่น</th>
+        <th>เทอม</th>
+        <th>หมวด</th>
+        <th>คะแนน</th>
+        <th>หมายเหตุ</th>
+      </tr>
+    </thead>
+    <tbody>
+      {Object.entries(scoreRecords).map(([uid, entries]) =>
+        Object.values(entries).map((entry, idx) => (
+          <tr key={uid + idx} style={{ borderBottom: '1px solid #ddd' }}>
+            <td>{entry.date}</td>
+            <td>{entry.nickname}</td>
+            <td>{entry.term}</td>
+            <td>{entry.category}</td>
+            <td>{entry.score}</td>
+            <td>{entry.note}</td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</div>
+
+// เพิ่ม state และฟังก์ชันที่เกี่ยวข้องไว้ด้านบนใน component:
+const [formData, setFormData] = useState({});
+const [scoreRecords, setScoreRecords] = useState({});
+
+useEffect(() => {
+  if (role === 'teacher') {
+    onValue(ref(db, 'scores'), (snapshot) => {
+      if (snapshot.exists()) setScoreRecords(snapshot.val());
+    });
+  }
+}, [role]);
+
+const handleAddScore = () => {
+  const uid = uids.find(id => nicknames[id] === formData.nickname);
+  if (!uid) return alert('ไม่พบชื่อนักเรียน');
+  const newEntry = {
+    date: new Date().toISOString().slice(0, 10),
+    ...formData
+  };
+  const newKey = push(ref(db)).key;
+  set(ref(db, `scores/${uid}/${newKey}`), newEntry);
+  setFormData({});
+};
+
   if (role === 'student' && studentData) {
     return (
       <div style={{ padding: 20 }}>
