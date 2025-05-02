@@ -197,23 +197,31 @@ function App() {
         <div style={{ marginTop: 40 }}>
           <h2>จัดการคะแนน</h2>
           <div>
-            <input placeholder="ชื่อเล่น" value={scoreForm.nickname || ''} onChange={e => setScoreForm({ ...scoreForm, nickname: e.target.value })} /><br />
-            <select value={scoreForm.term || 'term1'} onChange={e => setScoreForm({ ...scoreForm, term: e.target.value })}>
-              <option value="term1">เทอม 1</option>
-              <option value="term2">เทอม 2</option>
-            </select><br />
-            <select value={scoreForm.category || ''} onChange={e => setScoreForm({ ...scoreForm, category: e.target.value })}>
-              <option value="">เลือกหมวดคะแนน</option>
-              <option value="แบบฝึกหัด">แบบฝึกหัด</option>
-              <option value="กิจกรรม">กิจกรรม</option>
-              <option value="สอบกลางภาค">สอบกลางภาค</option>
-              <option value="สอบปลายภาค">สอบปลายภาค</option>
-              <option value="จิตพิสัย">จิตพิสัย</option>
-            </select><br />
-            <input type="number" placeholder="คะแนน" value={scoreForm.score || ''} onChange={e => setScoreForm({ ...scoreForm, score: e.target.value })} /><br />
-            <input placeholder="หมายเหตุ" value={scoreForm.note || ''} onChange={e => setScoreForm({ ...scoreForm, note: e.target.value })} /><br />
-            <button onClick={handleAddScore}>บันทึกคะแนน</button>
-          </div>
+  <select
+    value={scoreForm.nickname || ''}
+    onChange={e => setScoreForm({ ...scoreForm, nickname: e.target.value })}
+  >
+    <option value="">เลือกชื่อนักเรียน</option>
+    {students.map(([uid, data]) => (
+      <option key={uid} value={data.nickname}>{data.nickname}</option>
+    ))}
+  </select><br />
+  <select value={scoreForm.term || 'term1'} onChange={e => setScoreForm({ ...scoreForm, term: e.target.value })}>
+    <option value="term1">เทอม 1</option>
+    <option value="term2">เทอม 2</option>
+  </select><br />
+  <select value={scoreForm.category || ''} onChange={e => setScoreForm({ ...scoreForm, category: e.target.value })}>
+    <option value="">เลือกหมวดคะแนน</option>
+    <option value="แบบฝึกหัด">แบบฝึกหัด</option>
+    <option value="กิจกรรม">กิจกรรม</option>
+    <option value="สอบกลางภาค">สอบกลางภาค</option>
+    <option value="สอบปลายภาค">สอบปลายภาค</option>
+    <option value="จิตพิสัย">จิตพิสัย</option>
+  </select><br />
+  <input type="number" placeholder="คะแนน" value={scoreForm.score || ''} onChange={e => setScoreForm({ ...scoreForm, score: e.target.value })} /><br />
+  <input placeholder="หมายเหตุ" value={scoreForm.note || ''} onChange={e => setScoreForm({ ...scoreForm, note: e.target.value })} /><br />
+  <button onClick={handleAddScore}>บันทึกคะแนน</button>
+</div>
 
           <h3>ตารางคะแนน</h3>
           <table border="1" cellPadding="5">
