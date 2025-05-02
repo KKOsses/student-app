@@ -36,9 +36,9 @@ function App() {
   const [studentData, setStudentData] = useState(null);
   const [behaviorLogs, setBehaviorLogs] = useState([]);
   const [scores, setScores] = useState({});
+  const [students, setStudents] = useState([]);
 
-  const [newBehavior, setNewBehavior] = useState('');
-  const [newScore, setNewScore] = useState({ category: '', term: '', score: '' });
+  const [newStudent, setNewStudent] = useState({ uid: '', nickname: '', email: '', role: 'student' });
 
   useEffect(() => {
     onAuthStateChanged(auth, (currentUser) => {
@@ -63,6 +63,18 @@ function App() {
     });
   }, []);
 
+  useEffect(() => {
+    if (role === 'teacher') {
+      onValue(ref(db, 'users'), (snapshot) => {
+        if (snapshot.exists()) {
+          const allUsers = snapshot.val();
+          const studentList = Object.values(allUsers).filter(u => u.role === 'student');
+          setStudents(studentList);
+        }
+      });
+    }
+  }, [role]);
+
   const handleLogin = async () => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -72,21 +84,10 @@ function App() {
     }
   };
 
-  const handleAddBehavior = () => {
-    if (newBehavior && studentData) {
-      push(ref(db, `behavior/${studentData.uid}`), {
-        date: new Date().toISOString(),
-        note: newBehavior
-      });
-      setNewBehavior('');
-    }
-  };
-
-  const handleAddScore = () => {
-    const { category, term, score } = newScore;
-    if (category && term && score && studentData) {
-      set(ref(db, `scores/${studentData.uid}/${term}/${category}`), parseInt(score));
-      setNewScore({ category: '', term: '', score: '' });
+  const handleAddStudent = () => {
+    if (newStudent.uid && newStudent.nickname && newStudent.email) {
+      set(ref(db, `users/${newStudent.uid}`), newStudent);
+      setNewStudent({ uid: '', nickname: '', email: '', role: 'student' });
     }
   };
 
@@ -105,17 +106,38 @@ function App() {
 
   if (role === 'teacher') {
     return (
-      <div style={{ padding: 20 }}>
-        <h1>หน้าครู - จัดการข้อมูลนักเรียน</h1>
-        <h2>เพิ่มพฤติกรรม</h2>
-        <input placeholder="ข้อความพฤติกรรม" value={newBehavior} onChange={e => setNewBehavior(e.target.value)} />
-        <button onClick={handleAddBehavior}>บันทึก</button>
+      <div style={{ padding: 20, fontFamily: 'Segoe UI, sans-serif' }}>
+        <h1 style={{ fontSize: 28, fontWeight: 'bold', marginBottom: 20 }}>แดชบอร์ดครู: จัดการข้อมูลนักเรียน</h1>
 
-        <h2>เพิ่มคะแนน</h2>
-        <input placeholder="หมวดคะแนน" value={newScore.category} onChange={e => setNewScore({ ...newScore, category: e.target.value })} />
-        <input placeholder="เทอม (term1, term2)" value={newScore.term} onChange={e => setNewScore({ ...newScore, term: e.target.value })} />
-        <input placeholder="คะแนน" value={newScore.score} onChange={e => setNewScore({ ...newScore, score: e.target.value })} />
-        <button onClick={handleAddScore}>บันทึกคะแนน</button>
+        <section style={{ backgroundColor: '#f3f4f6', padding: 20, borderRadius: 10, marginBottom: 30 }}>
+          <h2 style={{ fontSize: 20, fontWeight: '600' }}>เพิ่มนักเรียนใหม่</h2>
+          <input placeholder="UID" value={newStudent.uid} onChange={e => setNewStudent({ ...newStudent, uid: e.target.value })} style={{ marginRight: 10 }} />
+          <input placeholder="ชื่อเล่น" value={newStudent.nickname} onChange={e => setNewStudent({ ...newStudent, nickname: e.target.value })} style={{ marginRight: 10 }} />
+          <input placeholder="Email" value={newStudent.email} onChange={e => setNewStudent({ ...newStudent, email: e.target.value })} style={{ marginRight: 10 }} />
+          <button onClick={handleAddStudent}>เพิ่มนักเรียน</button>
+        </section>
+
+        <section>
+          <h2 style={{ fontSize: 20, fontWeight: '600', marginBottom: 10 }}>รายชื่อนักเรียน</h2>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ backgroundColor: '#e5e7eb' }}>
+              <tr>
+                <th style={{ padding: 10 }}>UID</th>
+                <th>ชื่อเล่น</th>
+                <th>Email</th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((s, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid #ddd' }}>
+                  <td style={{ padding: 8 }}>{s.uid}</td>
+                  <td>{s.nickname}</td>
+                  <td>{s.email}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       </div>
     );
   }
