@@ -190,15 +190,7 @@ function App() {
         </table>
       </div>
     );
-  }
 
-  if (role === 'student' && studentData) {
-    return (
-      <div style={{ padding: 20 }}>
-        <h1>คะแนนและพฤติกรรมของ {studentData.nickname}</h1>
-      </div>
-    );
-  }
 <div style={{ marginTop: 40 }}>
   <h2 style={{ fontSize: 20, fontWeight: '600', marginBottom: 10 }}>จัดการคะแนน</h2>
 
@@ -276,6 +268,17 @@ const handleAddScore = () => {
   set(ref(db, `scores/${uid}/${newKey}`), newEntry);
   setFormData({});
 };
+
+  }
+
+  if (role === 'student' && studentData) {
+    return (
+      <div style={{ padding: 20 }}>
+        <h1>คะแนนและพฤติกรรมของ {studentData.nickname}</h1>
+      </div>
+    );
+  }
+
 
   return <div>Loading...</div>;
 }
