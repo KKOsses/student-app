@@ -1,8 +1,11 @@
+// App.js - ระบบจัดการนักเรียนแบบ popup form และ UID อัตโนมัติ
+
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import {
   getAuth,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   onAuthStateChanged
 } from 'firebase/auth';
 import {
@@ -10,9 +13,11 @@ import {
   ref,
   get,
   set,
-  push,
-  onValue
+  remove,
+  onValue,
+  push
 } from 'firebase/database';
+import { v4 as uuidv4 } from 'uuid';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyD0dkJ2kyflxx7YXMk4uRUKBmG_-DVdAgw',
@@ -34,11 +39,19 @@ function App() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('');
   const [studentData, setStudentData] = useState(null);
-  const [behaviorLogs, setBehaviorLogs] = useState([]);
-  const [scores, setScores] = useState({});
   const [students, setStudents] = useState([]);
+  const [showForm, setShowForm] = useState(false);
 
-  const [newStudent, setNewStudent] = useState({ uid: '', nickname: '', email: '', role: 'student' });
+  const [formData, setFormData] = useState({
+    firstname: '',
+    lastname: '',
+    nickname: '',
+    gender: 'ชาย',
+    email: '',
+    password: ''
+  });
+
+  const [editId, setEditId] = useState(null);
 
   useEffect(() => {
     onAuthStateChanged(auth, (currentUser) => {
@@ -50,12 +63,6 @@ function App() {
             setRole(userInfo.role);
             if (userInfo.role === 'student') {
               setStudentData(userInfo);
-              onValue(ref(db, `scores/${currentUser.uid}`), (snap) => {
-                if (snap.exists()) setScores(snap.val());
-              });
-              onValue(ref(db, `behavior/${currentUser.uid}`), (snap) => {
-                if (snap.exists()) setBehaviorLogs(Object.values(snap.val()));
-              });
             }
           }
         });
@@ -68,7 +75,7 @@ function App() {
       onValue(ref(db, 'users'), (snapshot) => {
         if (snapshot.exists()) {
           const allUsers = snapshot.val();
-          const studentList = Object.values(allUsers).filter(u => u.role === 'student');
+          const studentList = Object.entries(allUsers).filter(([_, u]) => u.role === 'student');
           setStudents(studentList);
         }
       });
@@ -84,10 +91,36 @@ function App() {
     }
   };
 
-  const handleAddStudent = () => {
-    if (newStudent.uid && newStudent.nickname && newStudent.email) {
-      set(ref(db, `users/${newStudent.uid}`), newStudent);
-      setNewStudent({ uid: '', nickname: '', email: '', role: 'student' });
+  const handleSaveStudent = async () => {
+    try {
+      if (!formData.email || !formData.password) return alert('กรุณากรอก email และ password');
+      let uid = editId || uuidv4();
+      if (!editId) {
+        const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        uid = cred.user.uid;
+      }
+      await set(ref(db, `users/${uid}`), {
+        uid,
+        role: 'student',
+        ...formData
+      });
+      setFormData({ firstname: '', lastname: '', nickname: '', gender: 'ชาย', email: '', password: '' });
+      setEditId(null);
+      setShowForm(false);
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleEditStudent = (uid, data) => {
+    setFormData(data);
+    setEditId(uid);
+    setShowForm(true);
+  };
+
+  const handleDeleteStudent = async (uid) => {
+    if (window.confirm('ต้องการลบนักเรียนคนนี้หรือไม่?')) {
+      await remove(ref(db, `users/${uid}`));
     }
   };
 
@@ -109,35 +142,52 @@ function App() {
       <div style={{ padding: 20, fontFamily: 'Segoe UI, sans-serif' }}>
         <h1 style={{ fontSize: 28, fontWeight: 'bold', marginBottom: 20 }}>แดชบอร์ดครู: จัดการข้อมูลนักเรียน</h1>
 
-        <section style={{ backgroundColor: '#f3f4f6', padding: 20, borderRadius: 10, marginBottom: 30 }}>
-          <h2 style={{ fontSize: 20, fontWeight: '600' }}>เพิ่มนักเรียนใหม่</h2>
-          <input placeholder="UID" value={newStudent.uid} onChange={e => setNewStudent({ ...newStudent, uid: e.target.value })} style={{ marginRight: 10 }} />
-          <input placeholder="ชื่อเล่น" value={newStudent.nickname} onChange={e => setNewStudent({ ...newStudent, nickname: e.target.value })} style={{ marginRight: 10 }} />
-          <input placeholder="Email" value={newStudent.email} onChange={e => setNewStudent({ ...newStudent, email: e.target.value })} style={{ marginRight: 10 }} />
-          <button onClick={handleAddStudent}>เพิ่มนักเรียน</button>
-        </section>
+        <button onClick={() => setShowForm(true)} style={{ marginBottom: 20 }}>➕ เพิ่มนักเรียน</button>
 
-        <section>
-          <h2 style={{ fontSize: 20, fontWeight: '600', marginBottom: 10 }}>รายชื่อนักเรียน</h2>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead style={{ backgroundColor: '#e5e7eb' }}>
-              <tr>
-                <th style={{ padding: 10 }}>UID</th>
-                <th>ชื่อเล่น</th>
-                <th>Email</th>
+        {showForm && (
+          <div style={{ background: '#f3f4f6', padding: 20, borderRadius: 10, marginBottom: 20 }}>
+            <h2>{editId ? 'แก้ไขนักเรียน' : 'เพิ่มนักเรียนใหม่'}</h2>
+            <input placeholder="ชื่อ" value={formData.firstname} onChange={e => setFormData({ ...formData, firstname: e.target.value })} /><br />
+            <input placeholder="นามสกุล" value={formData.lastname} onChange={e => setFormData({ ...formData, lastname: e.target.value })} /><br />
+            <input placeholder="ชื่อเล่น" value={formData.nickname} onChange={e => setFormData({ ...formData, nickname: e.target.value })} /><br />
+            <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })}>
+              <option value="ชาย">ชาย</option>
+              <option value="หญิง">หญิง</option>
+            </select><br />
+            <input placeholder="Email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} /><br />
+            <input placeholder="Password" type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} /><br />
+            <button onClick={handleSaveStudent}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มนักเรียน'}</button>
+            <button onClick={() => { setShowForm(false); setFormData({ firstname: '', lastname: '', nickname: '', gender: 'ชาย', email: '', password: '' }); setEditId(null); }} style={{ marginLeft: 10 }}>ยกเลิก</button>
+          </div>
+        )}
+
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead style={{ backgroundColor: '#e5e7eb' }}>
+            <tr>
+              <th style={{ padding: 10 }}>ชื่อ</th>
+              <th>นามสกุล</th>
+              <th>ชื่อเล่น</th>
+              <th>เพศ</th>
+              <th>Email</th>
+              <th>จัดการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {students.map(([uid, data], i) => (
+              <tr key={i} style={{ borderBottom: '1px solid #ddd' }}>
+                <td>{data.firstname}</td>
+                <td>{data.lastname}</td>
+                <td>{data.nickname}</td>
+                <td>{data.gender}</td>
+                <td>{data.email}</td>
+                <td>
+                  <button onClick={() => handleEditStudent(uid, data)}>✏️</button>
+                  <button onClick={() => handleDeleteStudent(uid)} style={{ marginLeft: 5 }}>🗑️</button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {students.map((s, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid #ddd' }}>
-                  <td style={{ padding: 8 }}>{s.uid}</td>
-                  <td>{s.nickname}</td>
-                  <td>{s.email}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }
@@ -146,27 +196,6 @@ function App() {
     return (
       <div style={{ padding: 20 }}>
         <h1>คะแนนและพฤติกรรมของ {studentData.nickname}</h1>
-        <div>
-          <h2>คะแนน</h2>
-          {Object.keys(scores).map(term => (
-            <div key={term}>
-              <h3>{term}</h3>
-              <ul>
-                {Object.entries(scores[term]).map(([category, value]) => (
-                  <li key={category}>{category}: {value}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-        <div>
-          <h2>ประวัติพฤติกรรม</h2>
-          <ul>
-            {behaviorLogs.map((entry, idx) => (
-              <li key={idx}>{new Date(entry.date).toLocaleDateString()}: {entry.note}</li>
-            ))}
-          </ul>
-        </div>
       </div>
     );
   }
