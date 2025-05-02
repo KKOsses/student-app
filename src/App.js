@@ -245,6 +245,77 @@ function App() {
           </table>
         </div>
       </div>
+
+// เพิ่มฟังก์ชันและสถานะใหม่
+const [behaviorForm, setBehaviorForm] = useState({});
+const [behaviorRecords, setBehaviorRecords] = useState({});
+
+// โหลดข้อมูลพฤติกรรมจาก Firebase
+useEffect(() => {
+  if (role === 'teacher') {
+    onValue(ref(db, 'behavior'), (snapshot) => {
+      if (snapshot.exists()) setBehaviorRecords(snapshot.val());
+    });
+  }
+}, [role]);
+
+const handleAddBehavior = () => {
+  const uid = students.find(([id, s]) => s.nickname === behaviorForm.nickname)?.[0];
+  if (!uid) return alert('ไม่พบชื่อนักเรียน');
+  const newEntry = {
+    date: new Date().toISOString().slice(0, 10),
+    ...behaviorForm
+  };
+  const newKey = push(ref(db)).key;
+  set(ref(db, `behavior/${uid}/${newKey}`), newEntry);
+  setBehaviorForm({});
+};
+
+const handleLogout = () => {
+  auth.signOut();
+  setUser(null);
+  setRole('');
+};
+
+// ในส่วน role === 'teacher' เพิ่มด้านล่างสุด
+<div style={{ marginTop: 40 }}>
+  <h2>บันทึกพฤติกรรม</h2>
+  <div>
+    <select
+      value={behaviorForm.nickname || ''}
+      onChange={e => setBehaviorForm({ ...behaviorForm, nickname: e.target.value })}
+    >
+      <option value="">เลือกชื่อนักเรียน</option>
+      {students.map(([uid, data]) => (
+        <option key={uid} value={data.nickname}>{data.nickname}</option>
+      ))}
+    </select><br />
+    <input placeholder="พฤติกรรม" value={behaviorForm.behavior || ''} onChange={e => setBehaviorForm({ ...behaviorForm, behavior: e.target.value })} /><br />
+    <input placeholder="หมายเหตุ" value={behaviorForm.note || ''} onChange={e => setBehaviorForm({ ...behaviorForm, note: e.target.value })} /><br />
+    <button onClick={handleAddBehavior}>บันทึกพฤติกรรม</button>
+  </div>
+  <h3>ตารางพฤติกรรม</h3>
+  <table border="1" cellPadding="5">
+    <thead>
+      <tr><th>วันที่</th><th>ชื่อเล่น</th><th>พฤติกรรม</th><th>หมายเหตุ</th></tr>
+    </thead>
+    <tbody>
+      {Object.entries(behaviorRecords).map(([uid, entries]) =>
+        Object.values(entries).map((entry, idx) => (
+          <tr key={uid + idx}>
+            <td>{entry.date}</td>
+            <td>{entry.nickname}</td>
+            <td>{entry.behavior}</td>
+            <td>{entry.note}</td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</div>
+
+// ปุ่มออกระบบ (แสดงด้านบนสุดหรือด้านขวา)
+<button onClick={handleLogout} style={{ float: 'right', background: '#eee', padding: '5px 10px' }}>ออกระบบ</button>
     );
   }
 
