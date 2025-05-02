@@ -138,6 +138,37 @@ function App() {
     setScoreForm({});
   };
 
+  // เพิ่มฟังก์ชันและสถานะใหม่
+const [behaviorForm, setBehaviorForm] = useState({});
+const [behaviorRecords, setBehaviorRecords] = useState({});
+
+// โหลดข้อมูลพฤติกรรมจาก Firebase
+useEffect(() => {
+  if (role === 'teacher') {
+    onValue(ref(db, 'behavior'), (snapshot) => {
+      if (snapshot.exists()) setBehaviorRecords(snapshot.val());
+    });
+  }
+}, [role]);
+
+const handleAddBehavior = () => {
+  const uid = students.find(([id, s]) => s.nickname === behaviorForm.nickname)?.[0];
+  if (!uid) return alert('ไม่พบชื่อนักเรียน');
+  const newEntry = {
+    date: new Date().toISOString().slice(0, 10),
+    ...behaviorForm
+  };
+  const newKey = push(ref(db)).key;
+  set(ref(db, `behavior/${uid}/${newKey}`), newEntry);
+  setBehaviorForm({});
+};
+
+const handleLogout = () => {
+  auth.signOut();
+  setUser(null);
+  setRole('');
+};
+
   if (!user) {
     return (
       <div style={{ padding: 20, maxWidth: 400, margin: '0 auto' }}>
@@ -245,37 +276,6 @@ function App() {
           </table>
         </div>
       </div>
-
-// เพิ่มฟังก์ชันและสถานะใหม่
-const [behaviorForm, setBehaviorForm] = useState({});
-const [behaviorRecords, setBehaviorRecords] = useState({});
-
-// โหลดข้อมูลพฤติกรรมจาก Firebase
-useEffect(() => {
-  if (role === 'teacher') {
-    onValue(ref(db, 'behavior'), (snapshot) => {
-      if (snapshot.exists()) setBehaviorRecords(snapshot.val());
-    });
-  }
-}, [role]);
-
-const handleAddBehavior = () => {
-  const uid = students.find(([id, s]) => s.nickname === behaviorForm.nickname)?.[0];
-  if (!uid) return alert('ไม่พบชื่อนักเรียน');
-  const newEntry = {
-    date: new Date().toISOString().slice(0, 10),
-    ...behaviorForm
-  };
-  const newKey = push(ref(db)).key;
-  set(ref(db, `behavior/${uid}/${newKey}`), newEntry);
-  setBehaviorForm({});
-};
-
-const handleLogout = () => {
-  auth.signOut();
-  setUser(null);
-  setRole('');
-};
 
 // ในส่วน role === 'teacher' เพิ่มด้านล่างสุด
 <div style={{ marginTop: 40 }}>
